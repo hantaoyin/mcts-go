@@ -19,14 +19,7 @@ struct NewLine {
     std::cout << "\n";
   }
 };
-
-struct DummyOstream {
-  template<typename T>
-  DummyOstream& operator<<(const T&) {
-    return *this;
-  }
-};
-}  // namespace check
+}  // namespace check_impl
 
 // This is meant to be a check always in place.
 //
