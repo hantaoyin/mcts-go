@@ -1,6 +1,5 @@
-// -*- mode:c++; c-basic-offset:2 -*-
+// -*- mode:c++; c-basic-offset:2; coding:utf-8-unix -*-
 // ==================================================================================================
-//
 // This main program writes the initial network file, used at the very beginning since all other
 // main programs using a network assume that at least one network file exists.
 #include <ctime>

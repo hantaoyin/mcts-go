@@ -1,3 +1,5 @@
+# -*- coding:utf-8-unix -*-
+# ==================================================================================================
 all: self_play init_network train interactive_play
 
 self_play: config.h debug_msg.h board.h utils.h training.h simple-nn-eval.h mcts.h main_self_play.C Zobrist.C

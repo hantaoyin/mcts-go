@@ -1,8 +1,5 @@
-// -*- mode:c++; c-basic-offset:2 -*-
+// -*- mode:c++; c-basic-offset:2; coding:utf-8-unix -*-
 // ==================================================================================================
-// Change log:
-//
-// 0.01: File added, implemented basic forward() & store().
 #ifndef INCLUDE_GUARD_SIMPLE_NN_EVAL_H__
 #define INCLUDE_GUARD_SIMPLE_NN_EVAL_H__
 

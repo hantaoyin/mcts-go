@@ -1,7 +1,5 @@
-// -*- mode:c++; c-basic-offset:2 -*-
+// -*- mode:c++; c-basic-offset:2; coding:utf-8-unix -*-
 // ==================================================================================================
-// Change log:
-//
 // Each saved file contains the latest 100000 games.  This means 2 training data files can have
 // overlapping examples.  This is done so that we can read all needed training data from a single
 // file.

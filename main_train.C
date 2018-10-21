@@ -1,7 +1,5 @@
-// -*- mode:c++; c-basic-offset:2 -*-
+// -*- mode:c++; c-basic-offset:2; coding:utf-8-unix -*-
 // ==================================================================================================
-// Change log:
-//
 #include <algorithm>
 #include <array>
 #include <bitset>

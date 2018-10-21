@@ -1,4 +1,4 @@
-// -*- mode:c++; c-basic-offset:2 -*-
+// -*- mode:c++; c-basic-offset:2; coding:utf-8-unix -*-
 // ==================================================================================================
 #ifndef INCLUDE_GUARD_BOARD_H__
 #define INCLUDE_GUARD_BOARD_H__

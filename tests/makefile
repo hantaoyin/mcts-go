@@ -1,3 +1,5 @@
+# -*- coding:utf-8-unix -*-
+# ==================================================================================================
 test-all: board-5x5
 
 board-5x5: ../board.h ../config.h ../debug_msg.h board-5x5.C ../Zobrist.C

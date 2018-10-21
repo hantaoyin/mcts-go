@@ -1,4 +1,5 @@
-// -*- mode:c++; c-basic-offset:2 -*-
+// -*- mode:c++; c-basic-offset:2; coding:utf-8-unix -*-
+// ==================================================================================================
 #include <iostream>
 
 #define BOARD_SIZE 5

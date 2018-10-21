@@ -1,8 +1,5 @@
-// -*- mode:c++; c-basic-offset:2 -*-
+// -*- mode:c++; c-basic-offset:2; coding:utf-8-unix -*-
 // ==================================================================================================
-// Change log:
-//
-// v0.01: File added.
 #ifndef INCLUDE_GUARD_TRAINING_H__
 #define INCLUDE_GUARD_TRAINING_H__
 #include <limits>

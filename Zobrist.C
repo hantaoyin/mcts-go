@@ -1,4 +1,5 @@
-// -*- mode:c++; c-basic-offset:2 -*-
+// -*- mode:c++; c-basic-offset:2; coding:utf-8-unix -*-
+// ==================================================================================================
 #include "board.h"
 
 namespace go_engine {
