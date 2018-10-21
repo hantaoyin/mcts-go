@@ -1,7 +1,11 @@
 // -*- mode:c++; c-basic-offset:2; coding:utf-8-unix -*-
 // ==================================================================================================
+#include <regex>
+
 #include "board.h"
+#include "mcts.h"
 #include "simple-nn-eval.h"
+#include "utils.h"
 
 class InteractivePlayer {
 public:

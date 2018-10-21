@@ -200,7 +200,7 @@ private:
         }
       }
       // Note that pass is always a valid move.
-      ASSERT(m_max < TotalMoves);
+      ASSERT(m_max < TotalMoves) << "\n" << local_board.DebugString();
 
       go_engine::Move move(c, m_max);
       LOG(debug_log) << "(MCTS)==> Move: " << move.DebugString();

@@ -462,7 +462,7 @@ private:
 class SimpleEvalEngine {
 public:
   SimpleEvalEngine()
-    : mlp(TotalMoves * 5, 3)
+    : mlp(TotalMoves * 2, 3)
   {}
 
   SimpleEvalEngine(const std::string& filename)

@@ -12,7 +12,7 @@ train: config.h debug_msg.h board.h training.h utils.h simple-nn-eval.h mcts.h m
 	g++ -std=c++17 -O3 -Wall -Wextra main_train.C Zobrist.C -lstdc++fs -o train
 
 interactive_play: config.h debug_msg.h board.h training.h utils.h simple-nn-eval.h main_interactive_play.C Zobrist.C
-	g++ -std=c++17 -O3 -Wall -Wextra main_train.C Zobrist.C -lstdc++fs -o interactive_play
+	g++ -std=c++17 -O3 -Wall -Wextra main_interactive_play.C Zobrist.C -lstdc++fs -o interactive_play
 
 clean:
 	-rm self_play init_network train interactive_play

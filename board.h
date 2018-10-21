@@ -159,11 +159,13 @@ public:
     , existing_states(nullptr) {}
 
   explicit BoardInfo(const BoardInfo& b)
-    : board(b.board)
-    , unique_id(b.unique_id)
-    , hash(b.hash)
-    , komi(b.komi)
+    : komi(b.komi)
     , existing_states(&b.seen_states)
+    , board(b.board)
+    , unique_id(b.unique_id)
+    , next_player(b.next_player)
+    , hash(b.hash)
+    , pass_count(b.pass_count)
   {
     CHECK(b.existing_states == nullptr) << "Can't duplicate from an already duplicated board.";
   }
@@ -174,34 +176,41 @@ public:
   // 1. . (dot) represents an empty intersection.
   // 2. X represents a black stone.
   // 3. O represents a white stone.
-  // 4. Whitespaces are ignored.
-  explicit BoardInfo(const std::string& input, float _komi)
+  // 4. All other characters are ignored.
+  explicit BoardInfo(const std::string& input, float _komi, Color _next_player)
     : komi(_komi)
     , existing_states(nullptr) {
     std::string s;
     for (char c : input) {
-      if (c == ' ') continue;
-      s.push_back(c);
+      if (c == '.' || c == 'X' || c == 'O') s.push_back(c);
     }
-    CHECK(s.size() == N * N) << "Invalid board: " << s;
+    CHECK(s.size() == N * N) << "Invalid board: " << input;
     for (size_t row = 0; row < N; ++row) {
       for (size_t col = 0; col < N; ++col) {
         size_t loc = (N - 1 - row) * N + col;
         if (s[loc] == '.') continue;
-        CHECK(s[loc] == 'X' || s[loc] == 'O') << "Invalid board: " << s;
-        Move move(s[loc] == 'X' ? BLACK : WHITE, row * N + col);
-        CHECK(is_valid(move)) << move.DebugString();
+        Color c = s[loc] == 'X' ? BLACK : WHITE;
+        Move move(c, row * N + col);
+        if (c != next_player) {
+          play(Move(opposite_color(c)));
+        }
+        CHECK(is_valid(move)) << move.DebugString() << "\n" << DebugString();
         play(move);
       }
     }
+    pass_count = 0;
+    next_player = _next_player;
   }
 
   // Reset the board to a state matching the beginning of the game.  komi is not changed, although
   // this is not a hard requirement.
   void reset() {
+    CHECK(existing_states == nullptr) << "Can't reset a derived board.";
     memset(&board, 0, sizeof(board));
     unique_id = 0;
+    next_player = BLACK;
     hash = 0;
+    pass_count = 0;
     seen_states.clear();
   }
 
@@ -244,6 +253,7 @@ public:
       ss << std::setw(3) << row + 1 << "\n";
     }
     print_row_labels();
+    ss << "\npass = " << pass_count << ", next = " << (next_player == BLACK ? 'B' : 'W');
     ss << "\nHash: " << std::hex << std::setfill('0') << hash << std::setfill(' ');
     return ss.str();
   }
@@ -348,6 +358,16 @@ public:
     return std::make_pair(count, h);
   }
 
+  bool finished() const {
+    ASSERT(pass_count <= 2) << pass_count;
+    return pass_count == 2;
+  }
+
+  Color get_next_player() const {
+    ASSERT(!finished());
+    return next_player;
+  }
+
   // Check if this move is valid (i.e., it's not a suicide move and it doesn't violate the ko rule).
   //
   // Algorithm used (sans the ko rule part):
@@ -358,6 +378,8 @@ public:
   //   If location has a group of the same color and it has more than 1 liberty -> return valid
   // return invalid.
   bool is_valid(Move move) const {
+    if (finished()) return false;
+    if (move.color != next_player) return false;
     if (move.pass) return true;
     if (board[move.loc].has_stone) return false;
 
@@ -417,10 +439,16 @@ public:
   }
 
   void play(Move move) {
-    if (move.pass) {
-      return;
-    }
     ASSERT(is_valid(move)) << move.DebugString();
+    next_player = opposite_color(next_player);
+    if (move.pass) {
+      ASSERT(pass_count <= 1) << pass_count;
+      ++pass_count;
+      return;
+    } else {
+      pass_count = 0;
+    }
+
     ASSERT(move.loc < N * N);
     Point& point = board[move.loc];
     hash ^= zobrist_hash.hash(move.loc, move.color == BLACK ? BLACK : WHITE);
@@ -547,12 +575,15 @@ private:
     return unique_id = 1;
   }
 
+  const float komi;
+  const std::unordered_set<ZobristHashType>* existing_states = nullptr;
+
   std::array<Point, N * N> board{};
   mutable unsigned short unique_id = 0;
+  Color next_player = BLACK;
   ZobristHashType hash = 0;
-  std::unordered_set<ZobristHash::type> seen_states;
-  const float komi;
-  const std::unordered_set<ZobristHash::type>* existing_states;
+  unsigned pass_count = 0;
+  std::unordered_set<ZobristHashType> seen_states;
 };
 }  // namespace go_engine
 #endif  // #ifndef INCLUDE_GUARD_BOARD_H__
