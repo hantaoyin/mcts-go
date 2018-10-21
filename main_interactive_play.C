@@ -1,0 +1,133 @@
+// -*- mode:c++; c-basic-offset:2 -*-
+// ==================================================================================================
+// Change log:
+//
+#include <algorithm>
+#include <array>
+#include <bitset>
+#include <deque>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctime>
+#include <deque>
+#include <fstream>
+#include <functional>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <map>
+#include <math.h>
+#include <numeric>
+#include <queue>
+#include <random>
+#include <set>
+#include <sstream>
+#include <tuple>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+#include <mmintrin.h>
+
+#include "config.h"
+#include "debug_msg.h"
+#include "board.h"
+#include "training.h"
+#include "simple-nn-eval.h"
+#include "mcts.h"
+#include "utils.h"
+
+class InteractivePlayer {
+public:
+  InteractivePlayer(float komi, go_engine::Color c)
+    : board(komi), color(c), my_turn(color == go_engine::BLACK)
+  {}
+
+  go_engine::Move gen_play() {
+    CHECK(my_turn);
+    LOG(true) << board.DebugString();
+
+    while (true) {
+      std::cout << "Move: ";
+
+      std::string move_s;
+      std::cin >> move_s;
+      // Parse the move.
+      if (move_s == "pass") {
+        return {color};
+      }
+      std::regex pattern("([a-z])([0-9]+)");
+      std::smatch match;
+      if (std::regex_match(move_s, match, pattern)) {
+        ASSERT(match.size() == 3);
+        std::ssub_match x_s = match[1];
+        std::ssub_match y_s = match[2];
+        ASSERT(x_s.str().size() == 1);
+        unsigned col = x_s.str()[0] - 'a';
+        unsigned row = std::stoull(y_s.str());
+        if (col < go_engine::N && row >= 1 && row <= go_engine::N) {
+          go_engine::Move move(color, (row - 1) * go_engine::N + col);
+          if (board.is_valid(move)) {
+            return move;
+          }
+        }
+      }
+      LOG(true) << "Invalid move, try again.";
+    }
+  }
+
+  void play(go_engine::Move move) {
+    CHECK(move.color == color);
+    board.play(move);
+    my_turn = false;
+  }
+
+  void opponent_play(go_engine::Move move) {
+    CHECK(move.color != color);
+    board.play(move);
+    my_turn = true;
+  }
+
+  float score() {
+    return color == go_engine::BLACK ? board.score() : -board.score();
+  }
+private:
+  go_engine::BoardInfo board;
+  const go_engine::Color color;
+  bool my_turn;
+};
+
+int main() {
+  const std::string network_file = utils::get_latest("data", "network");
+  CHECK(!network_file.empty()) << "Failed to find any network file.";
+  LOG(true) << "Loading network from " << network_file;
+  mcts::Tree<network::SimpleEvalEngine> ai_player(KOMI, go_engine::WHITE, network_file);
+  InteractivePlayer interactive_player(KOMI, go_engine::BLACK);
+
+  bool last_move_is_pass = false;
+  go_engine::Color current_player = go_engine::BLACK;
+  while (true) {
+    bool new_move_is_pass;
+    if (current_player == go_engine::BLACK) {
+      go_engine::Move move = interactive_player.gen_play();
+      interactive_player.play(move);
+      ai_player.opponent_play(move);
+      new_move_is_pass = move.pass;
+    } else {
+      go_engine::Move move = ai_player.gen_play(true);
+      ai_player.play(move);
+      interactive_player.opponent_play(move);
+      new_move_is_pass = move.pass;
+    }
+    current_player = go_engine::opposite_color(current_player);
+    if (new_move_is_pass && last_move_is_pass) {
+      break;
+    }
+    last_move_is_pass = new_move_is_pass;
+  }
+  LOG(true) << std::fixed << std::setprecision(1) << interactive_player.score();
+
+  return 0;
+}
