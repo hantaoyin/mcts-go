@@ -8,12 +8,9 @@
 #include <iomanip>
 #include <iostream>
 #include <math.h>
-#include <numeric>
 #include <random>
-#include <sstream>
 #include <utility>
 #include <vector>
-#include <mmintrin.h>
 
 #include "config.h"
 #include "debug_msg.h"
@@ -30,7 +27,7 @@ struct Node {
   std::array<float, TotalMoves> value;
   std::array<unsigned, TotalMoves> child;
   unsigned total_count;
-  // score from neural network.
+  // score from value network.
   float prior_score;
 };
 

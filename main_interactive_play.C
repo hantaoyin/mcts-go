@@ -1,41 +1,7 @@
 // -*- mode:c++; c-basic-offset:2; coding:utf-8-unix -*-
 // ==================================================================================================
-#include <algorithm>
-#include <array>
-#include <bitset>
-#include <deque>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctime>
-#include <deque>
-#include <fstream>
-#include <functional>
-#include <iomanip>
-#include <iostream>
-#include <limits>
-#include <map>
-#include <math.h>
-#include <numeric>
-#include <queue>
-#include <random>
-#include <set>
-#include <sstream>
-#include <tuple>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
-#include <vector>
-#include <mmintrin.h>
-
-#include "config.h"
-#include "debug_msg.h"
 #include "board.h"
-#include "training.h"
 #include "simple-nn-eval.h"
-#include "mcts.h"
-#include "utils.h"
 
 class InteractivePlayer {
 public:

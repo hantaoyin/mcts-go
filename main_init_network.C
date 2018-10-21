@@ -5,7 +5,6 @@
 #include <ctime>
 #include <string>
 
-#include "config.h"
 #include "simple-nn-eval.h"
 
 int main() {
