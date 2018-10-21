@@ -6,36 +6,14 @@
 #ifndef INCLUDE_GUARD_SIMPLE_NN_EVAL_H__
 #define INCLUDE_GUARD_SIMPLE_NN_EVAL_H__
 
-#include <algorithm>
 #include <array>
-#include <bitset>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctime>
-#include <deque>
-#include <experimental/filesystem>
 #include <fstream>
-#include <functional>
-#include <initializer_list>
 #include <iomanip>
 #include <iostream>
-#include <limits>
-#include <map>
 #include <math.h>
-#include <numeric>
-#include <queue>
 #include <random>
-#include <set>
-#include <sstream>
 #include <string>
-#include <tuple>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
 #include <vector>
-#include <mmintrin.h>
 
 #include "config.h"
 #include "debug_msg.h"
