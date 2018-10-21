@@ -156,7 +156,7 @@ public:
   // to white player.
   explicit BoardInfo(float _komi)
     : komi(_komi)
-    , existing_states(nullptr) {}
+  {}
 
   explicit BoardInfo(const BoardInfo& b)
     : komi(b.komi)
@@ -179,7 +179,7 @@ public:
   // 4. All other characters are ignored.
   explicit BoardInfo(const std::string& input, float _komi, Color _next_player)
     : komi(_komi)
-    , existing_states(nullptr) {
+  {
     std::string s;
     for (char c : input) {
       if (c == '.' || c == 'X' || c == 'O') s.push_back(c);
