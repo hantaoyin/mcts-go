@@ -1,16 +1,5 @@
 // -*- mode:c++; c-basic-offset:2 -*-
 // ==================================================================================================
-// Change log:
-//
-// 0.01: Basic setup: add/remove stones, check for self-capture moves. ko rules are unimplemented.
-//
-// 0.02: Added Zobrist hash (check https://en.wikipedia.org/wiki/Zobrist_hashing) to record
-// historical game states, ko rules are yet to be implemented.
-//
-// 0.03: Added score() function according to Tromp-Taylor rules.
-//
-// 0.04: Fixed a bug in is_valid() calculation that counts the same group of opposite color twice if
-// the group is adjacent to the location of the move from 2 or more sides.
 #ifndef INCLUDE_GUARD_BOARD_H__
 #define INCLUDE_GUARD_BOARD_H__
 
@@ -179,17 +168,6 @@ public:
     CHECK(b.existing_states == nullptr) << "Can't duplicate from an already duplicated board.";
   }
 
-  // template<typename... Args> BoardInfo(Args...) = delete;
-
-  // Reset the board to a state matching the beginning of the game.  komi is not changed, although
-  // this is not a hard requirement.
-  void reset() {
-    memset(&board, 0, sizeof(board));
-    unique_id = 0;
-    hash = 0;
-    seen_states.clear();
-  }
-
   // Construct from a string representing the board.  This is mainly for debugging purposes.
   //
   // Input string is interpreted as a row major representation of the board, where:
@@ -216,6 +194,15 @@ public:
         play(move);
       }
     }
+  }
+
+  // Reset the board to a state matching the beginning of the game.  komi is not changed, although
+  // this is not a hard requirement.
+  void reset() {
+    memset(&board, 0, sizeof(board));
+    unique_id = 0;
+    hash = 0;
+    seen_states.clear();
   }
 
   std::string DebugString() const {
