@@ -176,6 +176,9 @@ public:
   float score() const {
     return color == go_engine::BLACK ? board.score() : -board.score();
   }
+  bool is_valid(go_engine::Move move) const {
+    return board.is_valid(move);
+  }
 private:
   // Perform a full Monte Carlo tree search from state id.  Return value is the score of this move
   // (winning probability of the current player).
