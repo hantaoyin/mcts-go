@@ -81,7 +81,7 @@ public:
     , engine(std::random_device()())
     , dir(1.03f)
   {
-    init_node(board, go_engine::BLACK);
+    init_node(board);
   }
 
   void reset() {
@@ -89,7 +89,7 @@ public:
     id = 0;
     states.clear();
     history.clear();
-    init_node(board, go_engine::BLACK);
+    init_node(board);
   }
 
   const std::array<unsigned, go_engine::TotalMoves>& get_search_count() const {
@@ -156,7 +156,7 @@ public:
     auto& node = states[id];
     if (node.child[m] == Unexplored) {
       node.child[m] = states.size();
-      init_node(board, opposite_color(static_cast<go_engine::Color>(move.color)));
+      init_node(board);
     }
     id = node.child[m];
   }
@@ -213,7 +213,7 @@ private:
         LOG(debug_log) << "(MCTS)==> " << go_engine::to_string(c) << ": score (Count) = " << score;
       } else if (node.child[m_max] == Unexplored) {
         node.child[m_max] = states.size();
-        score = 1.0f - init_node(local_board, opposite_color(c));
+        score = 1.0f - init_node(local_board);
         LOG(debug_log) << "(MCTS)==> " << go_engine::to_string(c) << ": score (NN) = " << score;
       } else {
         ASSERT(node.child[m_max] < states.size());
@@ -231,7 +231,7 @@ private:
 
   // The new node is always appended to the end of the vector of nodes, which means its id (pointer)
   // is implicitly defined.
-  float init_node(const go_engine::BoardInfo& b, go_engine::Color next_player) {
+  float init_node(const go_engine::BoardInfo& b) {
     states.emplace_back();
     auto& node = states.back();
     for (size_t m = 0; m < TotalMoves; ++m) {
@@ -240,7 +240,7 @@ private:
       node.child[m] = Unexplored;
     }
     node.total_count = 0;
-    node.prior_score = eval.run(b, next_player, node.prior);
+    node.prior_score = eval.run(b, b.get_next_player(), node.prior);
     // Add Dirichlet noise to encourage exploration.
     const std::array<float, TotalMoves>& noise = dir.gen();
     for (size_t m = 0; m < TotalMoves; ++m) {
