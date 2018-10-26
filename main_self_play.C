@@ -63,7 +63,7 @@ public:
         const auto& count(players[current_player].get_search_count());
         players[current_player].play(move);
         go_engine::Color opponent = go_engine::opposite_color(current_player);
-        players[opponent].opponent_play(move);
+        players[opponent].play(move);
         current_player = opponent;
         new_game.states.emplace_back(move, count);
         if (move.pass && last_move_is_pass) {

@@ -76,7 +76,7 @@ class Tree {
 public:
   template<typename... Args>
   Tree(float komi, go_engine::Color c, Args&&... args)
-    :board(komi), color(c), id(0), my_turn(color == go_engine::BLACK)
+    :board(komi), color(c), id(0)
     , eval(std::forward<Args>(args)...)
     , engine(std::random_device()())
     , dir(1.03f)
@@ -87,7 +87,6 @@ public:
   void reset() {
     board.reset();
     id = 0;
-    my_turn = color == go_engine::BLACK;
     states.clear();
     history.clear();
     init_node(board, go_engine::BLACK);
@@ -98,11 +97,10 @@ public:
   }
 
   go_engine::Move gen_play(bool debug_log) {
-    CHECK(my_turn);
+    CHECK(board.get_next_player() == color);
     for (size_t i = 0; i < SearchCount; ++i) {
       search_from(id, !history.empty() && history.back().pass, false);
     }
-    my_turn = false;
 
     float sum = 0.0f;
     const Node& node = states[id];
@@ -149,15 +147,18 @@ public:
   }
 
   void play(go_engine::Move move) {
-    CHECK(move.color == color);
-    change_state(states[id], move);
-    my_turn = false;
-  }
+    ASSERT(board.is_valid(move)) << board.DebugString();
+    board.play(move);
+    history.push_back(move);
 
-  void opponent_play(go_engine::Move move) {
-    CHECK(move.color != color);
-    change_state(states[id], move);
-    my_turn = true;
+    size_t m = move.id();
+    ASSERT(m < go_engine::TotalMoves) << move.DebugString();
+    auto& node = states[id];
+    if (node.child[m] == Unexplored) {
+      node.child[m] = states.size();
+      init_node(board, opposite_color(static_cast<go_engine::Color>(move.color)));
+    }
+    id = node.child[m];
   }
 
   float score() {
@@ -225,7 +226,7 @@ private:
       ++states[root].total_count;
       return score;
     };
-    return search_recursively(my_turn ? color : go_engine::opposite_color(color), root, last_move_is_pass);
+    return search_recursively(board.get_next_player(), root, last_move_is_pass);
   }
 
   // The new node is always appended to the end of the vector of nodes, which means its id (pointer)
@@ -248,28 +249,12 @@ private:
     return node.prior_score;
   }
 
-  // Change internal state in board and id according to the move chosen.
-  void change_state(Node& node, const go_engine::Move move) {
-    ASSERT(board.is_valid(move)) << board.DebugString();
-    board.play(move);
-    history.push_back(move);
-
-    size_t m = move.id();
-    ASSERT(m < go_engine::TotalMoves) << move.DebugString();
-    if (node.child[m] == Unexplored) {
-      node.child[m] = states.size();
-      init_node(board, opposite_color(static_cast<go_engine::Color>(move.color)));
-    }
-    id = node.child[m];
-  }
-
   // Control parameters.
   static constexpr size_t SearchCount = 1000;
 
   go_engine::BoardInfo board;
   const go_engine::Color color;
   size_t id; // Current Node in states corresponding to the board.
-  bool my_turn;
   EvalEngine eval;
 
   std::vector<Node> states;

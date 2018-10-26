@@ -10,11 +10,11 @@
 class InteractivePlayer {
 public:
   InteractivePlayer(float komi, go_engine::Color c)
-    : board(komi), color(c), my_turn(color == go_engine::BLACK)
+    : board(komi), color(c)
   {}
 
   go_engine::Move gen_play() {
-    CHECK(my_turn);
+    CHECK(board.get_next_player() == color);
     LOG(true) << board.DebugString();
 
     while (true) {
@@ -47,15 +47,7 @@ public:
   }
 
   void play(go_engine::Move move) {
-    CHECK(move.color == color);
     board.play(move);
-    my_turn = false;
-  }
-
-  void opponent_play(go_engine::Move move) {
-    CHECK(move.color != color);
-    board.play(move);
-    my_turn = true;
   }
 
   float score() {
@@ -64,7 +56,6 @@ public:
 private:
   go_engine::BoardInfo board;
   const go_engine::Color color;
-  bool my_turn;
 };
 
 int main() {
@@ -81,12 +72,12 @@ int main() {
     if (current_player == go_engine::BLACK) {
       go_engine::Move move = interactive_player.gen_play();
       interactive_player.play(move);
-      ai_player.opponent_play(move);
+      ai_player.play(move);
       new_move_is_pass = move.pass;
     } else {
       go_engine::Move move = ai_player.gen_play(true);
       ai_player.play(move);
-      interactive_player.opponent_play(move);
+      interactive_player.play(move);
       new_move_is_pass = move.pass;
     }
     current_player = go_engine::opposite_color(current_player);
