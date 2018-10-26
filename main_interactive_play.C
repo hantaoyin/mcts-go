@@ -22,6 +22,10 @@ public:
 
       std::string move_s;
       std::cin >> move_s;
+      if (move_s.empty()) {
+        std::cout << std::endl;
+        exit(0);
+      }
       // Parse the move.
       if (move_s == "pass") {
         return {color};
