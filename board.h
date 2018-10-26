@@ -559,7 +559,7 @@ private:
   // unique ID.  This ensures that the returned value is never seen before.  When this internal
   // value wraps around, we reset the payload field of all empty locations on the board (expensive).
   //
-  // Obvious, this method is not thread safe, and one must be very careful if the payload field of
+  // Obviously, this method is not thread safe, and one must be very careful if the payload field of
   // empty locations are also used for other purposes (which is not the case so far).
   unsigned short next_id() const {
     ++unique_id;
