@@ -1,7 +1,7 @@
 import numpy, time, glob
 import mcts, board
 import tensorflow as tf
-from tf_network import Network, find_latest_model
+from tf_network import Network
 import training_data_io
 
 SIZE = mcts.board_size()
@@ -27,7 +27,6 @@ def transform_training_data(games):
 
             assert(len(m[2]) == SIZE * SIZE + 1)
             network_output_policy = numpy.array(m[2], dtype=numpy.float32)
-            # print(network_input, network_output_policy, network_output_value)
             network_output_policy += 1.e-5
             network_output_policy = network_output_policy / numpy.sum(network_output_policy)
             network_output_value = 1.e-5 + numpy.array([color if score < 0 else 1 - color], dtype=numpy.float32) * (1. - 1.e-5 * 2.)
@@ -47,12 +46,13 @@ def load_training_data():
 
 gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.20)
 with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)):
-    network = Network(find_latest_model())
+    network = Network()
+    print(network.model.summary())
+
     x, y = load_training_data()
-    # print(network.model.summary())
     network.fit(x, y, epochs=2)
-    predictions = network.model.predict(x)
+    network.store('data/network.{}'.format(int(time.time())))
+    # predictions = network.model.predict(x)
     # for k in (60, 62, 63):
     #     print(y[0][k], y[1][k])
     #     print(predictions[0][k], predictions[1][k])
-    network.store('data/network.{}'.format(int(time.time())))
