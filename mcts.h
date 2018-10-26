@@ -11,6 +11,7 @@
 #include <random>
 #include <utility>
 #include <vector>
+#include <type_traits>
 
 #include "config.h"
 #include "debug_msg.h"
@@ -62,7 +63,7 @@ private:
 // This eval engine simply sets all priors to equal values and score to 0.5 (both players have equal
 // probability to win).
 struct DummyEvalEngine {
-  float run(const go_engine::BoardInfo&, go_engine::Color, std::array<float, TotalMoves>& prior) {
+  float operator()(const go_engine::BoardInfo&, go_engine::Color, std::array<float, TotalMoves>& prior) {
     for (size_t m = 0; m < TotalMoves; ++m) {
       prior[m] = 1.0f / static_cast<float>(TotalMoves);
     }
@@ -72,12 +73,15 @@ struct DummyEvalEngine {
 
 template<typename EvalEngine>
 class Tree {
+  static_assert(std::is_same<float, decltype(std::declval<EvalEngine>()(std::declval<const go_engine::BoardInfo&>(),
+                                                                        std::declval<go_engine::Color>(),
+                                                                        std::declval<std::array<float, TotalMoves>&>()))>::value,
+                "Invalid EvalEngine.");
   static constexpr unsigned Unexplored = static_cast<unsigned>(-1);
 public:
-  template<typename... Args>
-  Tree(float komi, go_engine::Color c, Args&&... args)
+  Tree(float komi, go_engine::Color c, EvalEngine&& _eval)
     :board(komi), color(c), id(0)
-    , eval(std::forward<Args>(args)...)
+    , eval(std::move(_eval))
     , engine(std::random_device()())
     , dir(1.03f)
   {
@@ -93,13 +97,16 @@ public:
   }
 
   const std::array<unsigned, go_engine::TotalMoves>& get_search_count() const {
+    ASSERT(id < states.size()) << id << " >= " << states.size();
     return states[id].count;
   }
 
   go_engine::Move gen_play(bool debug_log) {
+    CHECK(!board.finished()) << board.DebugString();
     CHECK(board.get_next_player() == color);
+    ASSERT(id < states.size()) << id << " >= " << states.size();
     for (size_t i = 0; i < SearchCount; ++i) {
-      search_from(id, !history.empty() && history.back().pass, false);
+      search_from(id, false);
     }
 
     float sum = 0.0f;
@@ -148,17 +155,22 @@ public:
 
   void play(go_engine::Move move) {
     ASSERT(board.is_valid(move)) << board.DebugString();
+    ASSERT(id < states.size()) << id << " >= " << states.size();
     board.play(move);
     history.push_back(move);
 
-    size_t m = move.id();
-    ASSERT(m < go_engine::TotalMoves) << move.DebugString();
-    auto& node = states[id];
-    if (node.child[m] == Unexplored) {
-      node.child[m] = states.size();
-      init_node(board);
+    if (board.finished()) {
+      id = static_cast<size_t>(-1);
+    } else {
+      size_t m = move.id();
+      ASSERT(m < go_engine::TotalMoves) << move.DebugString();
+      auto& node = states[id];
+      if (node.child[m] == Unexplored) {
+        node.child[m] = states.size();
+        init_node(board);
+      }
+      id = node.child[m];
     }
-    id = node.child[m];
   }
 
   float score() const {
@@ -167,15 +179,15 @@ public:
 private:
   // Perform a full Monte Carlo tree search from state id.  Return value is the score of this move
   // (winning probability of the current player).
-  float search_from(size_t root, bool last_move_is_pass, bool debug_log) {
-    // TODO: Very expensive.
+  float search_from(size_t root, bool debug_log) {
     go_engine::BoardInfo local_board(board);
-    std::function<unsigned(go_engine::Color, size_t, bool)> search_recursively =
-      [this, &search_recursively, &local_board, debug_log](go_engine::Color c, size_t root, bool last_move_is_pass) -> float {
+    std::function<unsigned(size_t)> search_recursively =
+      [this, &search_recursively, &local_board, debug_log](size_t root) -> float {
       ASSERT(root < states.size());
       auto& node = states[root];
       LOG(debug_log) << "\n" << local_board.DebugString();
 
+      go_engine::Color c = local_board.get_next_player();
       float ucb1_max = -std::numeric_limits<float>::infinity();
       unsigned m_max = TotalMoves;
       const float nsq = sqrt((float)node.total_count);
@@ -207,8 +219,8 @@ private:
       LOG(debug_log) << "(MCTS)==> Move: " << move.DebugString();
       local_board.play(move);
 
-      float score;
-      if (move.pass && last_move_is_pass) {  // 2 consecutive passes, end the game now.
+      float score = 0.0f;
+      if (local_board.finished()) {
         score = c == go_engine::BLACK ? local_board.score() >= 0 : local_board.score() < 0;
         LOG(debug_log) << "(MCTS)==> " << go_engine::to_string(c) << ": score (Count) = " << score;
       } else if (node.child[m_max] == Unexplored) {
@@ -218,7 +230,7 @@ private:
       } else {
         ASSERT(node.child[m_max] < states.size());
         // Continue by recursive play.
-        score = 1.0f - search_recursively(go_engine::opposite_color(c), node.child[m_max], move.pass);
+        score = 1.0f - search_recursively(node.child[m_max]);
       }
       // Update.
       ++states[root].count[m_max];
@@ -226,7 +238,7 @@ private:
       ++states[root].total_count;
       return score;
     };
-    return search_recursively(board.get_next_player(), root, last_move_is_pass);
+    return search_recursively(root);
   }
 
   // The new node is always appended to the end of the vector of nodes, which means its id (pointer)
@@ -240,7 +252,7 @@ private:
       node.child[m] = Unexplored;
     }
     node.total_count = 0;
-    node.prior_score = eval.run(b, b.get_next_player(), node.prior);
+    node.prior_score = eval(b, b.get_next_player(), node.prior);
     // Add Dirichlet noise to encourage exploration.
     const std::array<float, TotalMoves>& noise = dir.gen();
     for (size_t m = 0; m < TotalMoves; ++m) {

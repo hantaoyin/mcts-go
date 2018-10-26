@@ -473,8 +473,8 @@ public:
     mlp.store(filename);
   }
 
-  float run(const go_engine::BoardInfo&b, go_engine::Color next_player,
-            std::array<float, TotalMoves>& prior) {
+  float operator()(const go_engine::BoardInfo&b, go_engine::Color next_player,
+                   std::array<float, TotalMoves>& prior) {
     const Edge& out = mlp.forward(b, next_player);
     ASSERT(out.size() == TotalMoves + 1) << out.size();
     for (size_t m = 0; m < TotalMoves; ++m) {
