@@ -41,11 +41,7 @@ def transform_training_data(games):
 
 def load_training_data():
     training_data = sorted(glob.glob('data/training_data.*'))
-    data = [training_data_io.load(v) for v in training_data]
-    assert(all([v['size'] == SIZE for v in data]))
-    assert(all([v['komi'] == KOMI for v in data]))
-    # Merge training data.
-    all_games = sum([v['games'] for v in data], [])
+    all_games = sum([training_data_io.load(v) for v in training_data], [])
     # Transform into a format useable for model training.
     return transform_training_data(all_games)
 

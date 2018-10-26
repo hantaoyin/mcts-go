@@ -20,9 +20,17 @@ class PyEvalWrapper {
     PyTuple_SetItem(args, 0, array_obj);
   }
   
-  PyEvalWrapper(PyEvalWrapper&& other) = default;
-  // Be careful about proper ref counting and pointers inside PyTuple if copy constructor is needed. 
-  PyEvalWrapper(const PyEvalWrapper& other) = delete;
+  // Be careful about proper ref counting and pointers inside PyTuple.
+  PyEvalWrapper(const PyEvalWrapper& other)
+    : eval(other.eval)
+  {
+    Py_XINCREF(eval);
+    npy_intp dims[4] = {1, 3, go_engine::N, go_engine::N};
+    args = PyTuple_New(1);
+    PyObject* array_obj = PyArray_SimpleNewFromData(4, dims, NPY_FLOAT, input.data());
+    PyTuple_SetItem(args, 0, array_obj);
+  }
+  PyEvalWrapper(PyEvalWrapper&& other) = delete;
   const PyEvalWrapper& operator=(const PyEvalWrapper&) = delete;
 
   ~PyEvalWrapper() {

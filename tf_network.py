@@ -4,7 +4,7 @@ import numpy as np
 import mcts
 import tensorflow as tf
 
-__all__ = ['Network', 'find_latest_model']
+__all__ = ['Network']
 
 size = mcts.board_size()
 
@@ -46,11 +46,9 @@ def find_latest_model():
         return None
 
 class Network:
-    def __init__(self, filename):
-        if filename:
-            self.model = tf.keras.models.load_model(filename)
-        else:
-            self.model = build_network_model()
+    def __init__(self):
+        filename = find_latest_model()
+        self.model = tf.keras.models.load_model(filename) if filename else build_network_model()
         self.model.compile(optimizer=tf.train.AdamOptimizer(),
                            loss=['categorical_crossentropy',
                                  'mean_squared_logarithmic_error'],

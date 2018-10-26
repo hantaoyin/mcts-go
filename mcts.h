@@ -79,9 +79,9 @@ class Tree {
                 "Invalid EvalEngine.");
   static constexpr unsigned Unexplored = static_cast<unsigned>(-1);
 public:
-  Tree(float komi, go_engine::Color c, EvalEngine&& _eval)
+  Tree(float komi, go_engine::Color c, const EvalEngine& _eval)
     :board(komi), color(c), id(0)
-    , eval(std::move(_eval))
+    , eval(_eval)
     , engine(std::random_device()())
     , dir(1.03f)
   {
