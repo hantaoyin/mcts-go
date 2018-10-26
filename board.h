@@ -163,9 +163,9 @@ public:
     , existing_states(&b.seen_states)
     , board(b.board)
     , unique_id(b.unique_id)
+    , pass_count(b.pass_count)
     , next_player(b.next_player)
     , hash(b.hash)
-    , pass_count(b.pass_count)
   {
     CHECK(b.existing_states == nullptr) << "Can't duplicate from an already duplicated board.";
   }
@@ -208,9 +208,9 @@ public:
     CHECK(existing_states == nullptr) << "Can't reset a derived board.";
     memset(&board, 0, sizeof(board));
     unique_id = 0;
+    pass_count = 0;
     next_player = BLACK;
     hash = 0;
-    pass_count = 0;
     seen_states.clear();
   }
 
@@ -580,9 +580,9 @@ private:
 
   std::array<Point, N * N> board{};
   mutable unsigned short unique_id = 0;
+  unsigned short pass_count = 0;
   Color next_player = BLACK;
   ZobristHashType hash = 0;
-  unsigned pass_count = 0;
   std::unordered_set<ZobristHashType> seen_states;
 };
 }  // namespace go_engine
