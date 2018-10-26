@@ -161,7 +161,7 @@ public:
     id = node.child[m];
   }
 
-  float score() {
+  float score() const {
     return color == go_engine::BLACK ? board.score() : -board.score();
   }
 private:
