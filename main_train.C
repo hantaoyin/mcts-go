@@ -50,6 +50,9 @@ void try_train(float step_size) {
   std::string filename("data/network.");
   filename += std::to_string(std::time(nullptr));
   eval.store(filename);
+  // TODO: This causes a race condition: the self play process may fail to load the network file it
+  // decides to use since deciding which network file to use and actually loading it are 2 distinct
+  // operations.
   std::experimental::filesystem::remove(latest_network);
 }
 
