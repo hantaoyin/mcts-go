@@ -70,7 +70,7 @@ class PyEvalWrapper {
     return ret;
   }
  private:
-  std::array<float, 3 * BoardSize * BoardSize> input;
+  std::array<float, 3 * go_engine::N * go_engine::N> input;
   PyObject* args;
   PyObject* eval;
 };
