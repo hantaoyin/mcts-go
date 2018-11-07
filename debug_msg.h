@@ -36,11 +36,14 @@ struct NewLine {
 
 // This is meant to be a check only in place in debug mode.  Unlike CHECK(condition),
 // ASSERT(condition) doesn't evaluate condition in NDEBUG mode.
-#ifdef NDEBUG
+//
+// About NDEBUG: some compiler toolchain / setup automatically add NDEBUG such as the one Python
+// uses to compile its modules, hence the same name is avoided here.
+#ifdef MY_NDEBUG
 #  define ASSERT(condition) true || std::cerr
 #else
 #  define ASSERT(condition) CHECK((condition))
-#endif  // NDEBUG
+#endif  // MY_NDEBUG
 
 // If condition is true, then LOG(condition) behaves like std::cout, otherwise does nothing and
 // discards any following << ... construction without evaluating them.
