@@ -52,7 +52,3 @@ with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)):
     x, y = load_training_data()
     network.fit(x, y, epochs=2)
     network.store('data/network.{}'.format(int(time.time())))
-    # predictions = network.model.predict(x)
-    # for k in (60, 62, 63):
-    #     print(y[0][k], y[1][k])
-    #     print(predictions[0][k], predictions[1][k])

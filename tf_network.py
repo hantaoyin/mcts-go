@@ -22,7 +22,7 @@ def build_network_model():
     v = tf.keras.layers.ZeroPadding2D(padding=1, data_format='channels_first')(inputs)
     v = tf.keras.layers.Conv2D(128, 3, data_format='channels_first', kernel_regularizer=tf.keras.regularizers.l2(1.e-4))(v)
     v = tf.keras.layers.LeakyReLU(0.01)(v)
-    for i in range(5):
+    for i in range(7):
         v = keras_residual_block(v)
 
     policy = tf.keras.layers.Conv2D(2, 3, kernel_regularizer=tf.keras.regularizers.l2(1.e-4))(v)
@@ -30,10 +30,10 @@ def build_network_model():
     policy = tf.keras.layers.Flatten(input_shape=[2, size, size])(policy)
     policy = tf.keras.layers.Dense(size * size + 1, kernel_regularizer=tf.keras.regularizers.l2(1.e-4), activation=tf.keras.activations.softmax, name='policy')(policy)
 
-    value = tf.keras.layers.Conv2D(2, 3, kernel_regularizer=tf.keras.regularizers.l2(1.e-4))(v)
+    value = tf.keras.layers.Conv2D(1, 3, kernel_regularizer=tf.keras.regularizers.l2(1.e-4))(v)
     value = tf.keras.layers.LeakyReLU(0.01)(value)
-    value = tf.keras.layers.Flatten(input_shape=[2, size, size])(value)
-    value = tf.keras.layers.Dense(20, kernel_regularizer=tf.keras.regularizers.l2(1.e-4))(value)
+    value = tf.keras.layers.Flatten(input_shape=[1, size, size])(value)
+    value = tf.keras.layers.Dense(128, kernel_regularizer=tf.keras.regularizers.l2(1.e-4))(value)
     value = tf.keras.layers.LeakyReLU(0.01)(value)
     value = tf.keras.layers.Dense(1, kernel_regularizer=tf.keras.regularizers.l2(1.e-4), activation=tf.keras.activations.sigmoid, name='value')(value)
     return tf.keras.models.Model(inputs=[inputs], outputs=[policy, value])
@@ -48,6 +48,10 @@ def find_latest_model():
 class Network:
     def __init__(self):
         filename = find_latest_model()
+        if filename:
+            print('Loading network {}.'.format(filename))
+        else:
+            print('Start from scratch.')
         self.model = tf.keras.models.load_model(filename) if filename else build_network_model()
         self.model.compile(optimizer=tf.train.AdamOptimizer(),
                            loss=['categorical_crossentropy',
@@ -59,7 +63,7 @@ class Network:
     def eval(self, input_board):
         self.eval_count += 1
         prediction = self.model.predict([input_board])
-        return prediction[0][0], float(prediction[1][0,0])
+        return prediction[0], prediction[1]
 
     def store(self, filename):
         self.model.save(filename)

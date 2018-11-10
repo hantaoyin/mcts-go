@@ -3,90 +3,148 @@
 #include <type_traits>
 #include <Python.h>
 #include <numpy/arrayobject.h>
+
 #include "mcts.h"
+#include "eval_bridge.h"
 
-namespace {
-class PyEvalWrapper {
-  static constexpr size_t BoardSize = go_engine::N * go_engine::N;
- public:
-  PyEvalWrapper(PyObject* _eval)
-    : eval(_eval)
-  {
-    CHECK(PyCallable_Check(eval)) << "Python object is not callable: " << PyUnicode_AsASCIIString(PyObject_Str(eval));
-    Py_XINCREF(eval);
-    npy_intp dims[4] = {1, 3, go_engine::N, go_engine::N};
-    args = PyTuple_New(1);
-    PyObject* array_obj = PyArray_SimpleNewFromData(4, dims, NPY_FLOAT, input.data());
-    PyTuple_SetItem(args, 0, array_obj);
-  }
-  
-  // Be careful about proper ref counting and pointers inside PyTuple.
-  PyEvalWrapper(const PyEvalWrapper& other)
-    : eval(other.eval)
-  {
-    Py_XINCREF(eval);
-    npy_intp dims[4] = {1, 3, go_engine::N, go_engine::N};
-    args = PyTuple_New(1);
-    PyObject* array_obj = PyArray_SimpleNewFromData(4, dims, NPY_FLOAT, input.data());
-    PyTuple_SetItem(args, 0, array_obj);
-  }
-  PyEvalWrapper(PyEvalWrapper&& other) = delete;
-  const PyEvalWrapper& operator=(const PyEvalWrapper&) = delete;
-
-  ~PyEvalWrapper() {
-    Py_XDECREF(args);
-    Py_XDECREF(eval);
-  }
-
-  float operator()(const go_engine::BoardInfo& b, go_engine::Color c, std::array<float, mcts::TotalMoves>& prior) {
-    for (size_t m = 0; m < BoardSize; ++m) {
-      input[m] = b.has_stone(m, c);
-      input[m + BoardSize] = b.has_stone(m, go_engine::opposite_color(c));
-      input[m + 2 * BoardSize] = c;
-    }
-
-    PyObject* result = PyObject_CallObject(eval, args);
-    if (result == nullptr) {
-      PyErr_PrintEx(1);
-      CHECK(false) << "nullptr returned.";
-    }
-
-    CHECK(PyTuple_Check(result));
-    CHECK(PyTuple_Size(result) == 2) << "Callback returns a tuple of size " << PyTuple_Size(result);
-
-    PyObject* policy_output = PyTuple_GetItem(result, 0);
-    PyObject* value_output = PyTuple_GetItem(result, 1);
-    CHECK(PyArray_Check(policy_output)) << "Return value 1 is not PyArray.";
-    CHECK(PyFloat_Check(value_output)) << "Return value 2 is not PyFloat.";
-
-    PyArrayObject* policy_array = (PyArrayObject*)policy_output;
-    CHECK(PyArray_TYPE(policy_array) == NPY_FLOAT) << "Elements in returned PyArray are type " << PyArray_TYPE(policy_array) << ", expecting " << NPY_FLOAT;
-    CHECK(PyArray_NDIM(policy_array) == 1) << "Returned PyArray has a dimension other than 1: " << PyArray_NDIM(policy_array);
-    npy_intp* dims = PyArray_DIMS(policy_array);
-    CHECK(dims[0] == go_engine::TotalMoves) << "Returned PyArray has size: " << dims[0] << ", expecting " << go_engine::TotalMoves;
-    memcpy(prior.data(), PyArray_GETPTR1(policy_array, 0), sizeof(float) * go_engine::TotalMoves);
-    float ret = PyFloat_AsDouble(value_output);
-    Py_XDECREF(result);
-    return ret;
-  }
- private:
-  std::array<float, 3 * go_engine::N * go_engine::N> input;
-  PyObject* args;
-  PyObject* eval;
-};
-}  // namespace
-
-typedef struct {
+namespace EvalBridgePyBinding {
+// This hard codes batch size as 32.
+struct EvalBridgeObject {
   PyObject_HEAD
-  mcts::Tree<PyEvalWrapper> tree;
-} MCTObject;
+  mcts::NetworkEvalBridge<5> bridge;
+};
+
+static PyObject* py_new(PyTypeObject* type, PyObject*, PyObject*) {
+  EvalBridgeObject* self = (EvalBridgeObject*)(type->tp_alloc(type, 0));
+  return (PyObject*)self;
+}
+static int py_init(EvalBridgeObject* self, PyObject* args, PyObject* kwargs) {
+  char options_string[][10] = {"eval"};
+  char* kwlist[] = {options_string[0], nullptr};
+  PyObject* eval;
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwlist, &eval)) {
+    return -1;
+  }
+  new(&(self->bridge)) mcts::NetworkEvalBridge<5>(eval);
+  return 0;
+}
+
+static void dealloc(EvalBridgeObject* self) {
+  self->bridge.~NetworkEvalBridge();
+  Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+static PyObject* worker_thread_count(EvalBridgeObject* self) {
+  unsigned long count = self->bridge.worker_thread_count();
+  return PyLong_FromUnsignedLong(count);
+}
+
+static PyObject* start_eval(EvalBridgeObject* self) {
+  Py_BEGIN_ALLOW_THREADS
+  self->bridge.startEval(_save);
+  Py_END_ALLOW_THREADS
+  Py_XINCREF(Py_None);
+  return Py_None;
+}
+}  // namespace EvalBridgePyBinding
+
+static PyMethodDef eval_bridge_methods[] = {
+  {"worker_thread_count", (PyCFunction)EvalBridgePyBinding::worker_thread_count, METH_NOARGS, "Return the number of worker threads should be used with this eval object."},
+  {"start_eval", (PyCFunction)EvalBridgePyBinding::start_eval, METH_NOARGS, "Start listening to eval requests, this function never returns."},
+  {nullptr},
+};
+
+static PyTypeObject eval_bridge_py_type = {
+  PyVarObject_HEAD_INIT(nullptr, 0)
+  "mcts.EvalBridge",
+  sizeof(EvalBridgePyBinding::EvalBridgeObject),  // tp_basicsize
+  0,  // tp_itemsize
+  (destructor)EvalBridgePyBinding::dealloc,  // tp_dealloc
+  0,  // tp_print
+  0,  // tp_getattr
+  0,  // tp_setattr
+  0,  // tp_as_async
+  0,  // tp_repr
+
+  0,  // tp_as_number;
+  0,  // tp_as_sequence
+  0,  // tp_as_mapping
+
+  0,  // tp_hash
+  0,  // tp_call
+  0,  // tp_str
+  0,  // tp_getattro
+  0,  // tp_setattro
+
+  0,  // tp_as_buffer
+
+  Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,  // tp_flags
+  "A class to group multiple eval requests from different threads into batches.",  // tp_doc
+  0,  // tp_traverse
+  0,  // tp_clear
+  0,  // tp_richcompare
+  0,  // tp_weaklistoffset
+  0,  // tp_iter
+  0,  // tp_iternext
+
+  eval_bridge_methods,  // tp_methods
+  0,  // tp_members
+  0,  // tp_getset
+  0,  // tp_base
+  0,  // tp_dict
+  0,  // tp_descr_get
+  0,  // tp_descr_set
+  0,  // tp_dictoffset
+  (initproc)EvalBridgePyBinding::py_init,  // tp_init
+  0,  // tp_alloc
+  EvalBridgePyBinding::py_new,  // tp_new
+  0,  // tp_free
+  0,  // tp_is_gc
+  0,  // tp_bases
+  0,  // tp_mro
+  0,  // tp_cache
+  0,  // tp_subclasses
+  0,  // tp_weaklist
+  0,  // tp_del
+  0,  // tp_version_tag
+  0,  // tp_finalize
+};
 
 namespace MCTPyBinding {
+struct MCTObject {
+  PyObject_HEAD
+  mcts::Tree<mcts::NetworkEvalBridge<5>&> tree;
+};
+
 static PyObject* py_new(PyTypeObject* type, PyObject*, PyObject*) {
   MCTObject* self = (MCTObject*)(type->tp_alloc(type, 0));
   return (PyObject*)self;
 }
-static int py_init(MCTObject*, PyObject*, PyObject*);
+
+static int py_init(MCTObject* self, PyObject* args, PyObject* kwargs) {
+  Py_BEGIN_ALLOW_THREADS
+  char options_string[][10] = {"komi", "color", "eval"};
+  char* kwlist[] = {options_string[0], options_string[1], options_string[2], nullptr};
+  float komi;
+  int color;
+  PyObject* eval;
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "fiO", kwlist, &komi, &color, &eval)) {
+    return -1;
+  }
+  if (color != go_engine::BLACK && color != go_engine::WHITE) {
+    PyErr_SetString(PyExc_ValueError, "color can only be 0 or 1.");
+    return -1;
+  }
+  if (PyObject_TypeCheck(eval, &eval_bridge_py_type)) {
+    auto* obj = (EvalBridgePyBinding::EvalBridgeObject*)eval;
+    new(&(self->tree)) mcts::Tree<mcts::NetworkEvalBridge<5>&>(komi, (go_engine::Color)color, obj->bridge);
+  } else {
+    PyErr_SetString(PyExc_ValueError, "Must pass a valid EvalBridge object.");
+    return -1;
+  }
+  Py_END_ALLOW_THREADS
+  return 0;
+}
 
 static void dealloc(MCTObject* self) {
   self->tree.~Tree();
@@ -94,7 +152,9 @@ static void dealloc(MCTObject* self) {
 }
 
 static PyObject* reset(MCTObject* self) {
+  Py_BEGIN_ALLOW_THREADS
   self->tree.reset();
+  Py_END_ALLOW_THREADS
   Py_INCREF(Py_None);
   return Py_None;
 }
@@ -133,6 +193,7 @@ static PyObject* is_valid(MCTObject* self, PyObject* args) {
 }
 
 static PyObject* play(MCTObject* self, PyObject* args) {
+  Py_BEGIN_ALLOW_THREADS
   int color, pos;
   if (!PyArg_ParseTuple(args, "ii", &color, &pos)) {
     return nullptr;
@@ -147,12 +208,20 @@ static PyObject* play(MCTObject* self, PyObject* args) {
   }
   go_engine::Move move((go_engine::Color)color, pos);
   self->tree.play(move);
+  Py_END_ALLOW_THREADS
   Py_XINCREF(Py_None);
   return Py_None;
 }
 
-static PyObject* gen_play(MCTObject* self) {
-  go_engine::Move move = self->tree.gen_play(true);
+static PyObject* gen_play(MCTObject* self, PyObject* args) {
+  go_engine::Move move(go_engine::BLACK);
+  Py_BEGIN_ALLOW_THREADS
+  int debug_log = 0;
+  if (!PyArg_ParseTuple(args, "p", &debug_log)) {
+    return nullptr;
+  }
+  move = self->tree.gen_play(debug_log);
+  Py_END_ALLOW_THREADS
   return PyLong_FromUnsignedLong(move.id());
 }
 
@@ -160,14 +229,14 @@ static PyObject* score(MCTObject* self) {
   double s = self->tree.score();
   return PyFloat_FromDouble(s);
 }
-};
+}  // namespace MCTPyBinding
 
 static PyMethodDef MCT_methods[] = {
   {"reset", (PyCFunction)MCTPyBinding::reset, METH_NOARGS, "Reset the tree."},
   {"get_search_count", (PyCFunction)MCTPyBinding::get_search_count, METH_NOARGS, "Return the search / play out count of the current game state, this should always be called right after gen_play and before play."},
   {"is_valid", (PyCFunction)MCTPyBinding::is_valid, METH_VARARGS, "is_valid(color, pos): Test if a move is valid."},
   {"play", (PyCFunction)MCTPyBinding::play, METH_VARARGS, "play(color, pos): Play a move and change internal state."},
-  {"gen_play", (PyCFunction)MCTPyBinding::gen_play, METH_NOARGS, "Gnerate a play using MCTS."},
+  {"gen_play", (PyCFunction)MCTPyBinding::gen_play, METH_VARARGS, "Gnerate a play using MCTS."},
   {"score", (PyCFunction)MCTPyBinding::score, METH_NOARGS, "Get my score - opponent's score."},
   {nullptr},
 };
@@ -175,7 +244,7 @@ static PyMethodDef MCT_methods[] = {
 static PyTypeObject mct_py_type = {
   PyVarObject_HEAD_INIT(nullptr, 0)
   "mcts.Tree",
-  sizeof(MCTObject),  // tp_basicsize
+  sizeof(MCTPyBinding::MCTObject),  // tp_basicsize
   0,  // tp_itemsize
   (destructor)MCTPyBinding::dealloc,  // tp_dealloc
   0,  // tp_print
@@ -228,25 +297,6 @@ static PyTypeObject mct_py_type = {
   0,  // tp_finalize
 };
 
-namespace MCTPyBinding {
-static int py_init(MCTObject* self, PyObject* args, PyObject* kwargs) {
-  char options_string[][10] = {"komi", "color", "eval"};
-  char* kwlist[] = {options_string[0], options_string[1], options_string[2], nullptr};
-  float komi;
-  int color;
-  PyObject* eval;
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "fiO", kwlist, &komi, &color, &eval)) {
-    return -1;
-  }
-  if (color != go_engine::BLACK && color != go_engine::WHITE) {
-    PyErr_SetString(PyExc_ValueError, "color can only be 0 or 1.");
-    return -1;
-  }
-  new(&(self->tree)) mcts::Tree<PyEvalWrapper>(komi, (go_engine::Color)color, PyEvalWrapper(eval));
-  return 0;
-}
-} // MCTPyBinding
-
 static PyObject* board_size(PyObject*, PyObject*) {
   return PyLong_FromLong((long)go_engine::N);
 }
@@ -256,7 +306,7 @@ static PyMethodDef module_methods[] = {
   {nullptr, nullptr, 0, nullptr},
 };
 
-static struct PyModuleDef mcts_module = {
+static PyModuleDef mcts_module = {
   PyModuleDef_HEAD_INIT,
   "mcts",
   nullptr,
@@ -265,12 +315,20 @@ static struct PyModuleDef mcts_module = {
 };
 
 PyMODINIT_FUNC PyInit_mcts(void) {
+  import_array();
+
+  if (PyType_Ready(&eval_bridge_py_type) < 0) {
+    return nullptr;
+  }
   if (PyType_Ready(&mct_py_type) < 0) {
     return nullptr;
   }
+
   PyObject* m = PyModule_Create(&mcts_module);
+
+  Py_INCREF(&eval_bridge_py_type);
+  PyModule_AddObject(m, "EvalBridge", (PyObject*)&eval_bridge_py_type);
   Py_INCREF(&mct_py_type);
   PyModule_AddObject(m, "Tree", (PyObject*)&mct_py_type);
-  import_array();
   return m;
 }
