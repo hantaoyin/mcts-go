@@ -13,6 +13,8 @@
 #include "board.h"
 #include "debug_msg.h"
 
+// This class accumulates pending eval requests from multiple threads, batch them and feed to the
+// underlying eval engine (e.g., tensorflow) for better performance.
 namespace mcts {
 template<size_t LogBatchSize>
 class NetworkEvalBridge {
