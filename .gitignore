@@ -1,0 +1,6 @@
+board.*.so
+mcts.*.so
+
+__pycache__/
+build/
+data/
