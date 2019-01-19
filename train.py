@@ -44,11 +44,11 @@ def load_training_data():
     # Transform into a format useable for model training.
     return transform_training_data(all_games)
 
+x, y = load_training_data()
+
 gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.20)
 with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)):
     network = Network()
     print(network.model.summary())
-
-    x, y = load_training_data()
     network.fit(x, y, epochs=2)
     network.store('data/network.{}'.format(int(time.time())))

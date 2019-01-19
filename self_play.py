@@ -48,7 +48,7 @@ class WorkerThread(threading.Thread):
                 [p.reset() for p in players]
             training_data_io.store('data/training_data.{}.{}'.format(self.thread_id, int(time.time())), games)
 
-gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.20)
+gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.05)
 sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
 network = Network()
