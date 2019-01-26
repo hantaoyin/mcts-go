@@ -185,7 +185,7 @@ private:
   // (winning probability of the current player).
   float search_from(size_t root, bool debug_log) {
     go_engine::BoardInfo local_board(board);
-    std::function<unsigned(size_t)> search_recursively =
+    std::function<float(size_t)> search_recursively =
       [this, &search_recursively, &local_board, debug_log](size_t root) -> float {
       ASSERT(root < states.size());
       auto& node = states[root];
