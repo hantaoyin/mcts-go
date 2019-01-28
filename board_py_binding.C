@@ -168,23 +168,22 @@ static PyTypeObject board_BoardType = {
 };
 
 static int Board_init(BoardObject* self, PyObject* args, PyObject* kwargs) {
-  if (PyTuple_Size(args) == 0) {
-    new(&(self->go_board)) go_engine::BoardInfo(KOMI);
-  } else if (PyTuple_Size(args) == 1) {
-    PyObject* obj = PyTuple_GetItem(args, 0);
-    if (PyObject_IsInstance(obj, (PyObject*)&board_BoardType)) {
-      new(&(self->go_board)) go_engine::BoardInfo(((BoardObject*)obj)->go_board);
-    } else {
-      PyErr_SetString(PyExc_TypeError, "__init__() either takes no arg or another board.");
-      return 0;
-    }
+  const char* err_msg = "__init__() takes exactly one float as komi.";
+  if (PyTuple_Size(args) != 1) {
+    PyErr_SetString(PyExc_TypeError, err_msg);
+    return 0;
   }
-  // static char*kwlist[] = {"komi", nullptr};
-  // float _komi;
-  // if (!PyArg_ParseTupleAndKeywords(args, kwargs, "f", kwlist, &_komi)) {
-  //   return -1;
-  // }
-  // new(&(self->go_board)) go_engine::BoardInfo(_komi);
+  PyObject* obj = PyTuple_GetItem(args, 0);
+  if (!PyFloat_Check(obj)) {
+    PyErr_SetString(PyExc_TypeError, err_msg);
+    return 0;
+  }
+  float komi = PyFloat_AsDouble(obj);
+  if (komi <= 0 || int(komi) == komi) {
+    PyErr_SetString(PyExc_TypeError, "Komi must be positive and not an exact integer.");
+    return 0;
+  }
+  new(&(self->go_board)) go_engine::BoardInfo(komi);
   return 0;
 }
 

@@ -7,6 +7,4 @@
 #define BOARD_SIZE 7
 #endif
 
-#define KOMI 7.5f
-
 #endif  // #ifndef INCLUDE_GUARD_CONFIG_H__

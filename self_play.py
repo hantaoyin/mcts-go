@@ -4,7 +4,6 @@ import tensorflow as tf
 from tf_network import Network
 
 SIZE = mcts.board_size()
-KOMI = 7.5
 
 def is_pass(move):
     return move == SIZE * SIZE

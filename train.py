@@ -14,7 +14,7 @@ def transform_training_data(games):
     for g in games:
         moves = g[0]
         score = g[1]
-        b = board.Board()
+        b = board.Board(KOMI)
         for m in moves:
             color = 0 if m[0] == 'B' else 1
             move = m[1]
