@@ -60,17 +60,6 @@ private:
   std::gamma_distribution<float> gamma;
 };
 
-// This eval engine simply sets all priors to equal values and score to 0.5 (both players have equal
-// probability to win).
-struct DummyEvalEngine {
-  float operator()(const go_engine::BoardInfo&, go_engine::Color, std::array<float, TotalMoves>& prior) {
-    for (size_t m = 0; m < TotalMoves; ++m) {
-      prior[m] = 1.0f / static_cast<float>(TotalMoves);
-    }
-    return 0.5f;
-  }
-};
-
 template<typename EvalEngine>
 class Tree {
   static_assert(std::is_same<float, decltype(std::declval<EvalEngine>()(std::declval<const go_engine::BoardInfo&>(),
