@@ -130,7 +130,8 @@ public:
   // 3. Eval done, waiting for output to be consumed.
   //
   // State change is a cycle: 1 -> 2 -> 3 -> 1.
-  float operator()(const go_engine::BoardInfo& b, go_engine::Color color, std::array<float, go_engine::TotalMoves>& prior) {
+  float operator()(const go_engine::BoardInfo& b, std::array<float, go_engine::TotalMoves>& prior) {
+    go_engine::Color color = b.get_next_player();
     const uint64_t my_eval_id = eval_count.fetch_add(1, std::memory_order_relaxed);
     const uint64_t my_slot_id = my_eval_id % BufferSize;
     const uint64_t my_batch_id = my_slot_id / BatchSize;

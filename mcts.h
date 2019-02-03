@@ -74,7 +74,6 @@ struct DummyEvalEngine {
 template<typename EvalEngine>
 class Tree {
   static_assert(std::is_same<float, decltype(std::declval<EvalEngine>()(std::declval<const go_engine::BoardInfo&>(),
-                                                                        std::declval<go_engine::Color>(),
                                                                         std::declval<std::array<float, TotalMoves>&>()))>::value,
                 "Invalid EvalEngine.");
   static constexpr unsigned Unexplored = static_cast<unsigned>(-1);
@@ -256,7 +255,7 @@ private:
       node.child[m] = Unexplored;
     }
     node.total_count = 0;
-    node.prior_score = eval(b, b.get_next_player(), node.prior);
+    node.prior_score = eval(b, node.prior);
     // Add Dirichlet noise to encourage exploration.
     const std::array<float, TotalMoves>& noise = dir.gen();
     for (size_t m = 0; m < TotalMoves; ++m) {
