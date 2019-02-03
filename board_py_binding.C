@@ -12,7 +12,25 @@ static PyObject* Board_new(PyTypeObject* type, PyObject* args, PyObject* kwargs)
   return (PyObject*)self;
 }
 
-static int Board_init(BoardObject* self, PyObject* args, PyObject* kwargs);
+static int Board_init(BoardObject* self, PyObject* args, PyObject* kwargs) {
+  const char* err_msg = "__init__() takes exactly one float as komi.";
+  if (PyTuple_Size(args) != 1) {
+    PyErr_SetString(PyExc_TypeError, err_msg);
+    return 0;
+  }
+  PyObject* obj = PyTuple_GetItem(args, 0);
+  if (!PyFloat_Check(obj)) {
+    PyErr_SetString(PyExc_TypeError, err_msg);
+    return 0;
+  }
+  float komi = PyFloat_AsDouble(obj);
+  if (komi <= 0 || int(komi) == komi) {
+    PyErr_SetString(PyExc_TypeError, "Komi must be positive and not an exact integer.");
+    return 0;
+  }
+  new(&(self->go_board)) go_engine::BoardInfo(komi);
+  return 0;
+}
 
 static void Board_dealloc(BoardObject* self) {
   self->go_board.~BoardInfo();
@@ -167,38 +185,7 @@ static PyTypeObject board_BoardType = {
   0,  // tp_finalize
 };
 
-static int Board_init(BoardObject* self, PyObject* args, PyObject* kwargs) {
-  const char* err_msg = "__init__() takes exactly one float as komi.";
-  if (PyTuple_Size(args) != 1) {
-    PyErr_SetString(PyExc_TypeError, err_msg);
-    return 0;
-  }
-  PyObject* obj = PyTuple_GetItem(args, 0);
-  if (!PyFloat_Check(obj)) {
-    PyErr_SetString(PyExc_TypeError, err_msg);
-    return 0;
-  }
-  float komi = PyFloat_AsDouble(obj);
-  if (komi <= 0 || int(komi) == komi) {
-    PyErr_SetString(PyExc_TypeError, "Komi must be positive and not an exact integer.");
-    return 0;
-  }
-  new(&(self->go_board)) go_engine::BoardInfo(komi);
-  return 0;
-}
-
-static PyObject* board_system(PyObject* board, PyObject* args) {
-  const char* command(nullptr);
-  int sts;
-  if (!PyArg_ParseTuple(args, "s", &command)) {
-    return nullptr;
-  }
-  sts = system(command);
-  return PyLong_FromLong(sts);
-}
-
 static PyMethodDef moduleMethods[] = {
-  {"system", board_system, METH_VARARGS, "Execute a shell command."},
   {nullptr, nullptr, 0, nullptr},
 };
 
