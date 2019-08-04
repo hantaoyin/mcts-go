@@ -22,7 +22,7 @@ def build_network_model():
     v = tf.keras.layers.ZeroPadding2D(padding=1, data_format='channels_first')(inputs)
     v = tf.keras.layers.Conv2D(128, 3, data_format='channels_first', kernel_regularizer=tf.keras.regularizers.l2(1.e-4))(v)
     v = tf.keras.layers.LeakyReLU(0.01)(v)
-    for i in range(7):
+    for i in range(9):
         v = keras_residual_block(v)
 
     policy = tf.keras.layers.Conv2D(2, 3, kernel_regularizer=tf.keras.regularizers.l2(1.e-4))(v)
