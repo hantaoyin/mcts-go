@@ -1,4 +1,8 @@
-import sys, numpy, time, threading
+import sys
+import numpy
+import time
+import threading
+
 import mcts, training_data_io
 import tensorflow as tf
 from tf_network import Network

@@ -4,7 +4,7 @@
 #define INCLUDE_GUARD_CONFIG_H__
 
 #ifndef BOARD_SIZE
-#define BOARD_SIZE 7
+#define BOARD_SIZE 9
 #endif
 
 #endif  // #ifndef INCLUDE_GUARD_CONFIG_H__

@@ -221,13 +221,9 @@ public:
       for (size_t col = 0; col < N; ++col) {
         ss << std::setw(2) << (char)('a' + col);
       }
-      ss << "   ";
-      for (size_t col = 0; col < N; ++col) {
-        ss << std::setw(2) << (char)('a' + col);
-      }
+      ss << "\n";
     };
     print_row_labels();
-    ss << "\n";
     for (size_t row = N - 1; row != static_cast<size_t>(-1); --row) {
       ss << std::setw(2) << row + 1;
       for (size_t col = 0; col < N; ++col) {
@@ -235,20 +231,6 @@ public:
         const Point& point = board[loc];
         const char v = point.has_stone ? (point.color == BLACK ? 'X' : 'O') : '.';
         ss << std::setw(2) << v;
-      }
-      ss << std::setw(3) << row + 1;
-      for (size_t col = 0; col < N; ++col) {
-        unsigned loc = row * N + col;
-        if (board[loc].has_stone) {
-          unsigned lc = count_liberty(loc).first;
-          unsigned char v;
-          if (lc >= 36) v = '+';
-          else if (lc >= 10) v = 'A' + lc;
-          else v = '0' + lc;
-          ss << std::setw(2) << v;
-        } else {
-          ss << std::setw(2) << '.';
-        }
       }
       ss << std::setw(3) << row + 1 << "\n";
     }
